@@ -14,3 +14,4 @@
 <br>
 <h3>✏️ Información a tener en cuenta</h3>
 <p>En el código del script, hay implementado una lista en la que puedes ingresar diferentes fechas separadas por una coma. Esta lista guardaría las fechas de vacaciones o para diferente uso, y con el fin de poder excluir el encendido del dispositivo Tapo110.</p>
+<p>El código está creado para que pueda encender dos dispositivos pero puedes readaptarlo para que cubra la cantidad deseada.</p>

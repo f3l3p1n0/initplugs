@@ -1,0 +1,119 @@
+"""import os
+import asyncio
+from datetime import datetime
+from dotenv import load_dotenv
+from kasa import Discover, Device, Credentials
+
+load_dotenv()
+
+VACACIONES = [
+    "2025-04-17",
+    "2025-04-18",
+    "2025-04-21",
+    "2025-05-01"
+]
+
+async def control_enchufe():
+    try:
+        # Conexión segura con credenciales
+        plug = await Discover.discover_single(
+            host=os.getenv("PLUG_IP"),
+            credentials=Credentials(
+                username=os.getenv("KASA_USER"),
+                password=os.getenv("KASA_PASSWORD")
+            )
+        )
+        
+        await plug.update()  # Obtener estado actual
+        
+        hoy = datetime.today().date()
+        vacaciones = [datetime.strptime(fecha, "%Y-%m-%d").date() for fecha in VACACIONES]
+        
+        if hoy not in vacaciones:
+            await plug.turn_on()
+            print("Enchufe encendido")
+        else:
+            print("Día de vacación - No se activa")
+
+    except Exception as e:
+        print(f"Error crítico: {str(e)}")
+
+if __name__ == "__main__":
+    asyncio.run(control_enchufe())
+"""
+
+import os
+import asyncio
+from datetime import datetime
+from dotenv import load_dotenv
+from kasa import Discover, Device, Credentials
+
+load_dotenv()
+
+VACACIONES = [
+    "2025-04-17",
+    "2025-04-18",
+    "2025-04-21",
+    "2025-05-01"
+]
+
+async def controlar_enchufe(ip: str, credenciales: Credentials, reintentos: int = 0, delay: int = 5):
+    """Función para controlar un enchufe con manejo de reintentos"""
+    intentos = 0
+    while True:
+        try:
+            enchufe = await Discover.discover_single(
+                host=ip,
+                credentials=credenciales
+            )
+            await enchufe.update()
+            
+            if not enchufe.is_on:
+                await enchufe.turn_on()
+                print(f"Enchufe {ip} encendido")
+            return True
+        except Exception as e:
+            print(f"Error en {ip}: {str(e)}")
+            if intentos >= reintentos:
+                raise
+            print(f"Reintentando en {delay} segundos... (Intento {intentos + 1}/{reintentos})")
+            await asyncio.sleep(delay)
+            intentos += 1
+
+async def main():
+    try:
+        credenciales = Credentials(
+            username=os.getenv("KASA_USER"),
+            password=os.getenv("KASA_PASSWORD")
+        )
+
+        # Verificar vacaciones
+        hoy = datetime.today().date()
+        vacaciones = [datetime.strptime(fecha, "%Y-%m-%d").date() for fecha in VACACIONES]
+        
+        if hoy in vacaciones:
+            print("Día de vacación - No se activa")
+            return
+
+        # Primer enchufe (sin reintentos)
+        await controlar_enchufe(os.getenv("PLUG_IP_1"), credenciales)
+        
+        # Segundo enchufe (con reintentos infinitos)
+        while True:
+            try:
+                await controlar_enchufe(
+                    os.getenv("PLUG_IP_2"),
+                    credenciales,
+                    reintentos=3,  # 3 reintentos por ciclo
+                    delay=10
+                )
+                break  # Salir del bucle si tiene éxito
+            except Exception:
+                print("Reintentando conexión principal...")
+                await asyncio.sleep(30)  # Espera más larga entre ciclos
+
+    except Exception as e:
+        print(f"Error crítico: {str(e)}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
